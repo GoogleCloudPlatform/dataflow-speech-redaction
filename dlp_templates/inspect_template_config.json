@@ -1,0 +1,130 @@
+{
+  "template_id": "inspect_template_azmw",
+  "inspect_template": {
+    "display_name": "CCAI log entry inspection for PCI compliance",
+    "description": "Inspection template for CCAI log entries needing PCI compliance",
+    "inspect_config": {
+      "info_types": [
+        { "name": "CREDIT_CARD_NUMBER" },
+        { "name": "DATE_OF_BIRTH" },
+        { "name": "EMAIL_ADDRESS" },
+        { "name": "FIRST_NAME" },
+        { "name": "IP_ADDRESS" },
+        { "name": "LAST_NAME" },
+        { "name": "PASSPORT" },
+        { "name": "PERSON_NAME" },
+        { "name": "PHONE_NUMBER" },
+        { "name": "STREET_ADDRESS" },
+        { "name": "US_DRIVERS_LICENSE_NUMBER" },
+        { "name": "US_HEALTHCARE_NPI" },
+        { "name": "US_PASSPORT" },
+        { "name": "US_SOCIAL_SECURITY_NUMBER" },
+        { "name": "US_VEHICLE_IDENTIFICATION_NUMBER" },
+        { "name": "US_EMPLOYER_IDENTIFICATION_NUMBER" }
+      ],
+      "min_likelihood": "POSSIBLE",
+      "limits": {},
+      "custom_info_types": [
+        {
+          "info_type": {
+            "name": "ALPHANUMERIC_PII_PATTERNS"
+          },
+          "regex": {
+            "pattern": "(?i)\\b(\\d[\\da-z\\.\\-_/:]{1,10}[a-z][\\da-z\\.\\-_/:]{1,10}|[a-z][\\da-z\\.\\-_/:]{1,10}\\d[\\da-z\\.\\-_/:]{1,10}|\\d[\\da-z\\.\\-_/:]{2,20}[a-z]|[a-z][\\da-z\\.\\-_/:]{2,20}\\d)\\b"
+          },
+          "likelihood": "VERY_LIKELY"
+        },
+        {
+          "info_type": {
+            "name": "DATE_WITH_WORDS"
+          },
+          "regex": {
+            "pattern": "(?i)\\b((Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|June?|July?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?) (([012]?\\d|3[01]|[23]?1st|2?2nd|2?3rd|([456789]|[123]\\d)th))|(([012]?\\d|3[01]|[23]?1st|2?2nd|2?3rd|([456789]|[123]\\d)th)) (Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|June?|July?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?))((,? |,)(19|20)?\\d\\d)?\\b"
+          },
+          "likelihood": "VERY_LIKELY"
+        },
+        {
+          "info_type": {
+            "name": "DIGIT_WORDS"
+          },
+          "regex": {
+            "pattern": "\\b(zero|one|two|three|four|five|six|seven|eight|nine)\\b"
+          },
+          "likelihood": "UNLIKELY"
+        },
+        {
+          "info_type": {
+            "name": "DO_NOT_MASK"
+          },
+          "regex": {
+            "pattern": "(?i)<do[_ \\-\\.]not[_ \\-\\.]mask>.*</do[_ \\-\\.]not[_ \\-\\.]mask>"
+          },
+          "likelihood": "VERY_LIKELY"
+        },
+        {
+          "info_type": {
+            "name": "FLOAT_VALUE"
+          },
+          "regex": {
+            "pattern": "^\\$?\\d*\\.\\d+$"
+          },
+          "likelihood": "VERY_UNLIKELY"
+        },
+        {
+          "info_type": {
+            "name": "NUMERIC_ENTRY"
+          },
+          "regex": {
+            "pattern": "\\b\\d[\\d/:\\.\\-_: ]*\\d\\b"
+          },
+          "likelihood": "VERY_LIKELY"
+        },
+        {
+          "info_type": {
+            "name": "PHRASES_TO_KEEP"
+          },
+          "regex": {
+            "pattern": "(?i)\\b(add phrases you want to keep using the | symbol as a separator)\\b"
+          },
+          "likelihood": "VERY_UNLIKELY"
+        },
+        {
+          "info_type": {
+            "name": "TIMINGS"
+          },
+          "regex": {
+            "pattern": "\\b\\d*\\.?\\d+ ?m?s\\b"
+          },
+          "likelihood": "VERY_UNLIKELY"
+        },
+        {
+          "info_type": {
+            "name": "US_DOLLAR_VALUE"
+          },
+          "regex": {
+            "pattern": "\\$ ?\\d[\\d,\\.]*\\b|\\b\\d[\\d,\\.]* (dollars|dólares|dolares|cents|centavos)\\b|^\\d+\\*\\d{2}$"
+          },
+          "likelihood": "VERY_LIKELY"
+        },
+        {
+          "info_type": {
+            "name": "US_PHONE_DIGITS"
+          },
+          "regex": {
+            "pattern": "\\b\\d{3}[\\ \\-\\.]\\d{3}[\\ \\-\\.]\\d{4}\\b"
+          },
+          "likelihood": "POSSIBLE"
+        },
+        {
+          "info_type": {
+            "name": "UUID"
+          },
+          "regex": {
+            "pattern": "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+          },
+          "likelihood": "VERY_UNLIKELY"
+        }
+      ]
+    }
+  }
+}
