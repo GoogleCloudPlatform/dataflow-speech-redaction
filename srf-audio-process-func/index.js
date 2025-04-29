@@ -26,7 +26,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 exports.srfAudioProcessFunc = (event, context, callback) => {
 	const file = event;
-	const topicName = "[YOUR_TOPIC_NAME]";
+	const topicName = "YOUR_TOPIC_NAME"; // TODO: Replace value with your GCP Pub/Sub topic name
 	const audioPath = { uri: `gs://${file.bucket}/${file.name}` };
 	const readFile = storage.bucket(file.bucket).file(file.name);
 
@@ -84,6 +84,7 @@ exports.srfAudioProcessFunc = (event, context, callback) => {
 				enableWordTimeOffsets: true,
 				useEnhanced: true,
 				audioChannelCount: channels,
+				enableSeparateRecognitionPerChannel: true,
 				model: 'phone_call'
 			};
 
@@ -95,7 +96,7 @@ exports.srfAudioProcessFunc = (event, context, callback) => {
 
 			let pubSubObj = {
 				'filename': `gs://${file.bucket}/${file.name}`,
-				'duration': duration
+				'duration': duration			
 			};
 
 			client

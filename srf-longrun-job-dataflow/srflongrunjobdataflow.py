@@ -99,50 +99,32 @@ def destination(element):
     return json.loads(element)["filename"]
 
 # function to redact sensitive data from audio file
-def redact_text(data, project):
-    logging.info(data)
+def redact_text(data, project, template_id):
+    #logging.info(data)
     dlp = google.cloud.dlp_v2.DlpServiceClient()
-    parent = dlp.project_path(project)
-    response = dlp.list_info_types('en-US')
-
-    # This will detect PII data for the info types listed
-    # https://cloud.google.com/dlp/docs/infotypes-reference
-    info_types = ["PERSON_NAME", 
-        "PHONE_NUMBER",
-        "ORGANIZATION_NAME",
-        "FIRST_NAME",
-        "LAST_NAME",
-        "EMAIL_ADDRESS",
-        "DATE_OF_BIRTH",
-        "EMAIL_ADDRESS",
-        "US_SOCIAL_SECURITY_NUMBER",
-        "STREET_ADDRESS"
-    ]
-    
-    info_types = [{"name": info_type} for info_type in info_types]
-
-    inspect_config = {
-        "info_types": info_types,
-        "include_quote":True
-    }
-    logging.info(data['transcript'])
+    parent = dlp.common_project_path(project)
+    request = google.cloud.dlp_v2.ListInfoTypesRequest()
+    response = dlp.list_info_types(request=request)
+    inspect_template_name = f"{parent}/inspectTemplates/{template_id}"
+    #logging.info(data['transcript'])
     item = {"value": data['transcript']}
-    response = dlp.inspect_content(
-        parent,
-        inspect_config=inspect_config,
-        item=item,
-    )
-    logging.info(response)
+
+    request = google.cloud.dlp_v2.InspectContentRequest(
+            parent=parent,
+            inspect_template_name=inspect_template_name,
+            item=item,)
+    response = dlp.inspect_content(request=request)
+    #logging.info(response)
     if response.result.findings:
         for finding in response.result.findings:
             try:
                 if finding.quote:
-                    print("Quote: {}".format(finding.quote))
+                    #logging.info("Quote: {}".format(finding.quote))
                     data['dlp'].append(finding.quote)
             except AttributeError:
                 pass
         else:
-            print("No findings.")
+            logging.info("No findings.")
     return data
 
 def run(argv=None, save_main_session=True):
@@ -157,6 +139,9 @@ def run(argv=None, save_main_session=True):
         '--input_subscription',
         help=('Input PubSub subscription of the form '
               '"projects/<PROJECT>/subscriptions/<SUBSCRIPTION>."'))
+    parser.add_argument('--inspect_template', required=True,
+        help='Input ID for dlp inspect template'
+              '"ID TEMPLATE"')
     parser.add_argument('--output', required=True,
                         help='Output BQ table to write results to '
                              '"PROJECT_ID:DATASET.TABLE"')
@@ -167,8 +152,9 @@ def run(argv=None, save_main_session=True):
 
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
     pipeline_options.view_as(StandardOptions).streaming = True
+    
     p = beam.Pipeline(options=pipeline_options)
-
+    
     # Read from PubSub into a PCollection.
     if known_args.input_subscription:
         messages = (p
@@ -189,13 +175,13 @@ def run(argv=None, save_main_session=True):
     parse_stt_output = stt_output | 'ParseSpeechToText' >> beam.Map(stt_parse_response)
 
     # Google Cloud DLP redaction for all info types
-    dlp_output = parse_stt_output | 'FindDLP' >> beam.Map(lambda j: redact_text(j, project_id))
+    dlp_output = parse_stt_output | 'FindDLP' >> beam.Map(lambda j: redact_text(j, project_id, template_id=known_args.inspect_template))
 
     # Convert to JSON
     json_output = dlp_output | 'JSONDumps' >> beam.Map(json.dumps)
 
     # Write findings to Cloud Storage
-    json_output | 'WriteFindings' >> beam.ParDo(WriteToSeparateFiles(known_args.output))
+    json_output | 'WriteFindings' >> beam.ParDo(WriteToSeparateFiles(known_args.output + '/'))
 
     p.run()
 

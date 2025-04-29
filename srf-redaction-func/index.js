@@ -13,11 +13,12 @@
  * limitations under the License.
  */
 
+
 'use strict';
 
-// CHANGE ME
-let redactedBucketName = "[YOUR_BUCKET]"
+let redactedBucketName = "gs://" + "REDACTED_AUDIO_BUCKET_NAME" // TODO: Replace value with your GCS Bucket Name
 
+const fs = require('fs');
 const storage = require('@google-cloud/storage')();
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
