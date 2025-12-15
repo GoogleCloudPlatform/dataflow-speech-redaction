@@ -31,7 +31,8 @@ The process follows:
 #### Enable the required APIs: 
 ``` shell
 export PROJECT_ID="<PROJECT_ID>" 
-
+```
+``` shell
 gcloud services enable \
     cloudbuild.googleapis.com \
     compute.googleapis.com \
@@ -64,7 +65,9 @@ Grant the necessary IAM roles either through the Google Cloud Console or by usin
 
 ```shell
 export PROJECT_ID="<PROJECT_ID>" 
+```
 
+```shell
 export GCE_SERVICE_ACCOUNT="$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/eventarc.eventReceiver" 
@@ -98,7 +101,6 @@ GCS_SERVICE_ACCOUNT="$(gcloud storage service-agent --project=${PROJECT_ID})"
 gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCS_SERVICE_ACCOUNT}" --role='roles/pubsub.publisher'
 ```
 
-
 ## How to install the Speech Analysis Framework
 
 #### 1. [Install the Google Cloud SDK](https://cloud.google.com/sdk/install)
@@ -111,55 +113,62 @@ gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
 
 #### 3. Through the [Google Cloud Console](https://console.cloud.google.com) create a folder named **tmp** in the newly created bucket for the DataFlow staging files
 
-#### 4. Create a storage bucket for **Uploaded Audio Files**. 
-> **⚠ NOTE**: The bucket must be regional.
+#### 4. Create a storage bucket for **Cloud Functions deployment**. 
 
 ``` shell
 gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
 ```
 
-#### 5. Create a storage bucket for **DLP Findings**. 
-> **⚠ NOTE**: The bucket must be regional. 
+#### 5. Create a storage bucket for **Uploaded Audio Files**. 
 
 ``` shell
 gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
 ```
 
-#### 6. Create a storage bucket for **Redacted Audio Files**
+#### 6. Create a storage bucket for **DLP Findings**.  
 
 ``` shell
 gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
 ```
 
-#### 7. Create Cloud Pub/Sub Topic
+#### 7. Create a storage bucket for **Redacted Audio Files**
+
+``` shell
+gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
+```
+
+#### 8. Create Cloud Pub/Sub Topic
 ``` shell
 gcloud pubsub topics create [YOUR_TOPIC_NAME]
 ```
 
-#### 8. Clone the github repo
+#### 9. Clone the github repo
 
-#### 9. Deploy the **Audio Process** Google Cloud Function
+#### 10. Deploy the **Audio Process** Google Cloud Function
 
 In the cloned repo, go to the `srf-audio-process-func` directory and deploy the following Cloud Function.
 
 > **⚠ NOTE**: On line 29 of the `index.js` file, add your TOPIC_NAME you created in step 7.
 
-> **⚠ NOTE**: Region must be the same as the Uploaded Audio Files bucket.
+> **⚠ NOTE**: the trigger location must be the same as the Uploaded Audio Files bucket.
 
 ``` shell
-gcloud functions deploy srfAudioProcessFunc 
+gcloud functions deploy srfAudioProcessFunc \
     --region=<REGION> \
-    --stage-bucket=[YOUR_UPLOADED_AUDIO_FILES_BUCKET_NAME] \
+    --trigger-location=[AUDIO_FILES_BUCKET_LOCATION] \
+    --stage-bucket=[STAGE_BUCKET_NAME] \
     --runtime=nodejs20 \
     --trigger-bucket=[YOUR_UPLOADED_AUDIO_FILES_BUCKET_NAME] \
+    --ingress-settings=internal-only
 ```
 > **⚠ NOTE**: If you run into any timeout issues with Cloud Functions, it is recommend to increase the timeout and optionally increase the Cloud Function resources.
 
-#### 10. Deploy the **Redact** Google Cloud Function
+#### 11. Deploy the **Redact** Google Cloud Function
 
 In the cloned repo, go to the `srf-redaction-func` directory and deploy the following Cloud Function.
 
 > **⚠ NOTE**: Before deploying the redact function, on line 19 of the `index.js` file, add your **Redacted Audio Files** bucket name.
+> **⚠ NOTE**: the trigger location must be the same as the DLP Findings bucket.
 
 ``` shell
 gcloud functions deploy srfRedactionFunc \
@@ -167,11 +176,13 @@ gcloud functions deploy srfRedactionFunc \
     --stage-bucket=[YOUR_UPLOADED_AUDIO_FILES_BUCKET_NAME] \
     --runtime=nodejs20 \
     --trigger-bucket=[YOUR_DLP_BUCKET_BUCKET_NAME] \
+    --trigger-location=[DLP_FINDINGS_BUCKET_LOCATION] \
+    --ingress-settings=internal-only
 ```
 
 > **⚠ NOTE**: For large audio files, it is recommend to change the Cloud Function memory allocation.
 
-#### 11. Deploy the Cloud Dataflow Job
+#### 12. Deploy the Cloud Dataflow Job
 
 In the cloned repo, go to `srf-longrun-job-dataflow` directory and deploy the Cloud Dataflow Job. Run the commands below to deploy the dataflow job:
 ``` shell
@@ -185,7 +196,7 @@ pip3 install apache-beam[gcp]
 
 Please wait as it might take a few minutes to complete.
 
-You can provide an existing [INSPECT_TEMPLATE_ID] if you already have an DLP Inspection template created or refer to section [Optional: DLP inspection template creation] to create a new one.
+You can provide an existing [INSPECT_TEMPLATE_ID] if you already have an DLP Inspection template created or refer to section [Optional: DLP inspection template creation](#dlp-inspection-template-creation) to create a new one.
 
 ``` shell
 python3 srflongrunjobdataflow.py \
@@ -202,7 +213,7 @@ python3 srflongrunjobdataflow.py \
 
 Once the steps are completed above, upload your audio files to the **Uploaded Audio Files** storage bucket. Once the file is processed you will find the DLP findings in the **DLP Findings** storage bucket and the redacted audio files in the **Redacted Audio Files** storage bucket.
 
-## Optional: DLP inspection template creation
+## DLP inspection template creation
 
 To create a DLP Inspection template, you can utilize the `create_template.py` Python script.
 
@@ -214,9 +225,7 @@ Before running the script, modify `inspect_template_congig.json` file to specify
 pip install google-cloud-dlp
 python3 create_template.py [PROJECT_ID] [JSON_INSPECT_TEMPLATE]
 
-python3 create_template.py \
-  --project_id speech-readaction-yt \
-  --config ./inspect_config.json 
+python3 create_template.py --project_id=speech-readaction-yt --config=inspect_template_config.json 
 ```
 
 This command will output the template ID that you will need to pass as part of the parameters to configure the dataflow job.

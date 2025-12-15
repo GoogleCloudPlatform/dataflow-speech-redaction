@@ -18,6 +18,7 @@ import json
 from google.oauth2 import service_account
 from collections import OrderedDict
 import sys
+import argparse
 
 def create_inspect_template (dlp_client, project_id , inspect_name, inspect_config_temp, inspect_description):
     try:

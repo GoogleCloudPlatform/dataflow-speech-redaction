@@ -26,7 +26,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 exports.srfAudioProcessFunc = (event, context, callback) => {
 	const file = event;
-	const topicName = "YOUR_TOPIC_NAME"; // TODO: Replace value with your GCP Pub/Sub topic name
+	const topicName = "YOUR_TOPIC_NAME"; // TODO: Replace value with your GCP Pub/Sub topic name. Only topic name, not the full path.
 	const audioPath = { uri: `gs://${file.bucket}/${file.name}` };
 	const readFile = storage.bucket(file.bucket).file(file.name);
 
