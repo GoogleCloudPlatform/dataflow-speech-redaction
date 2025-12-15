@@ -1,0 +1,9 @@
+project_id                  = "yt-terraform-redaction"
+region                      = "us-central1" # e.g., us-central1
+dataflow_staging_bucket_name  = "yt-redaction-dataflow-staging-bucket-name"
+cloud_functions_bucket_name = "yt-redaction-cloud-functions-bucket-name"
+audio_files_bucket_name     = "yt-redaction-audio-files-bucket-name"
+dlp_findings_bucket_name    = "yt-redaction-dlp-findings-bucket-name"
+redacted_audio_bucket_name  = "yt-redaction-redacted-audio-bucket-name"
+pubsub_topic_name           = "yt-redaction-pubsub-topic-name"
+dlp_template_id             = "yt-redaction-dlp-template-id"
