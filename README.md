@@ -113,7 +113,7 @@ gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
 
 #### 3. Through the [Google Cloud Console](https://console.cloud.google.com) create a folder named **tmp** in the newly created bucket for the DataFlow staging files
 
-#### 4. Create a storage bucket for **Cloud Functions deployment**. 
+#### 4. Create a storage bucket for **Cloud Functions deployment (Stage bucket)**. 
 
 ``` shell
 gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
@@ -173,7 +173,7 @@ In the cloned repo, go to the `srf-redaction-func` directory and deploy the foll
 ``` shell
 gcloud functions deploy srfRedactionFunc \
     --region=<REGION> \
-    --stage-bucket=[YOUR_UPLOADED_AUDIO_FILES_BUCKET_NAME] \
+    --stage-bucket=[STAGE_BUCKET_NAME] \
     --runtime=nodejs20 \
     --trigger-bucket=[YOUR_DLP_BUCKET_BUCKET_NAME] \
     --trigger-location=[DLP_FINDINGS_BUCKET_LOCATION] \
@@ -221,11 +221,11 @@ Before running the script, modify `inspect_template_congig.json` file to specify
 
 #### Run the script with the following command:
 
+In the cloned repo, go to `dlp_templates` directory
+
 ```shell
 pip install google-cloud-dlp
-python3 create_template.py [PROJECT_ID] [JSON_INSPECT_TEMPLATE]
-
-python3 create_template.py --project_id=speech-readaction-yt --config=inspect_template_config.json 
+python3 create_template.py --project_id=[PROJECT_ID] --config=inspect_template_config.json 
 ```
 
 This command will output the template ID that you will need to pass as part of the parameters to configure the dataflow job.
