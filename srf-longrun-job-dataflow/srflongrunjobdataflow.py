@@ -26,6 +26,7 @@ from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 from apache_beam.options.pipeline_options import StandardOptions
 from apache_beam.options.pipeline_options import GoogleCloudOptions
+from apache_beam.options.pipeline_options import WorkerOptions
 from google.cloud.dlp import DlpServiceClient
 
 class WriteToSeparateFiles(beam.DoFn):
@@ -149,7 +150,7 @@ def run(argv=None, save_main_session=True):
 
     pipeline_options = PipelineOptions(pipeline_args)
     project_id = pipeline_options.view_as(GoogleCloudOptions).project
-
+    pipeline_options.view_as(WorkerOptions).use_public_ips = False
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
     pipeline_options.view_as(StandardOptions).streaming = True
     
