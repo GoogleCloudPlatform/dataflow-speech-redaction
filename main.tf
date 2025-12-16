@@ -115,6 +115,7 @@ resource "google_storage_bucket" "redacted_audio_bucket" {
 
 resource "google_pubsub_topic" "topic" {
   name = var.pubsub_topic_name
+  depends_on = [google_project_service.enabled_apis]
 }
 
 # --- DLP Inspection Template ---
