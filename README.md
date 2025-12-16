@@ -216,6 +216,8 @@ Please wait as it might take a few minutes to complete.
 
 You can provide an existing [INSPECT_TEMPLATE_ID] if you already have an DLP Inspection template created or refer to section [Optional: DLP inspection template creation](#dlp-inspection-template-creation) to create a new one.
 
+> **⚠ NOTE**: The subnetwork must have Private Google Access enabled (On).
+
 ``` shell
 python3 srflongrunjobdataflow.py \
     --project=[YOUR_PROJECT_ID] \
