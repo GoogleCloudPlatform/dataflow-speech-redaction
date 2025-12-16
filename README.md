@@ -28,38 +28,21 @@ The process follows:
 
 ## Required IAM Permissions
 
-The service account or user executing these commands requires the following IAM Roles at the GCP Project level. These are grouped by their functional domain:
+The service account or user executing these commands requires the following IAM Roles at the GCP Project level:
 
-*Compute & Orchestration*
-- Cloud Functions Developer: To deploy and manage function-based logic.
-
-- Compute Admin: Full control over GCE resources (VMs, disks).
-
-- Dataflow Developer: To execute and monitor data processing pipelines.
-
-*Networking*
-- Compute Network Admin: To create and modify VPC resources.
-
-- Compute Network User: Allows the execution account to utilize existing network resources. 
-
-*Data & Security*
-- DLP Administrator: Full access to Cloud Data Loss Prevention features.
-
-- Storage Admin: Full control over GCS buckets and objects.
-
-- Pub/Sub Admin: To manage messaging topics and subscriptions.
-
-*Identity & Access Management (IAM)*
-- Project IAM Admin: To manage access control for the project.
-
-- Service Account User: Allows the executor to "act as" a service account to run jobs.
-
-- Service Usage Admin: To enable or disable APIs required by the script.
-
-*Logging & Monitoring*
-- Logging Admin: To manage log sinks and configurations.
-
-- Logs Viewer: To audit and troubleshoot execution via logs.
+- Cloud Functions Developer
+- Compute Admin
+- Compute Network Admin
+- Compute Network User
+- Dataflow Developer
+- DLP Administrator
+- Logging Admin
+- Logs Viewer
+- Project IAM Admin
+- Pub/Sub Admin
+- Service Account User
+- Service Usage Admin
+- Storage Admin
 
 ## APIs
 
