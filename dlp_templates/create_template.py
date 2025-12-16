@@ -18,6 +18,7 @@ import json
 from google.oauth2 import service_account
 from collections import OrderedDict
 import sys
+import argparse
 
 def create_inspect_template (dlp_client, project_id , inspect_name, inspect_config_temp, inspect_description):
     try:
@@ -54,22 +55,33 @@ def load_json(file_path):
     except Exception as e:
         print(f"Failed to load JSON file: {e}")
         return None
-    
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: create_template.py project_id service_accout_file_path inspect_config_file")
-        sys.exit(1)
-    project_id = sys.argv[1]
-    service_account_file=sys.argv[2]
-    credentials= service_account.Credentials.from_service_account_file(service_account_file)
+    # 1. Initialize Parser
+    parser = argparse.ArgumentParser(description="Create Google Cloud DLP templates using JSON configurations.")
+
+    # 2. Define Flags
+    parser.add_argument("--project_id", required=True, help="The Google Cloud Project ID")
+    parser.add_argument("--config", required=True, help="Path to the inspect_config JSON file")
+
+    # 3. Parse Arguments
+    args = parser.parse_args()
+
     dlp_client = dlp_v2.DlpServiceClient()
-    inspect_config_file= sys.argv[3]
-    inspect_json= load_json(inspect_config_file)
+
+    inspect_json = load_json(args.config)
+    
     if inspect_json:
-        inspect_template= inspect_json.get("inspect_template")
-        inspect_config_temp= inspect_template.get("inspect_config")
-        inspect_config_temp["include_quote"] = True
+        inspect_template = inspect_json.get("inspect_template")
+        inspect_config_temp = inspect_template.get("inspect_config")
+        inspect_config_temp["include_quote"] = True   
         inspect_name = inspect_template.get("display_name")
         inspect_description = inspect_template.get("description")
 
-        create_inspect_template(dlp_client, project_id , inspect_name, inspect_config_temp, inspect_description)
+        create_inspect_template(
+            dlp_client, 
+            args.project_id, 
+            inspect_name, 
+            inspect_config_temp, 
+            inspect_description
+        )
