@@ -26,6 +26,41 @@ The process follows:
 5. The Cloud Dataflow job identifies sensitive information and writes the findings to a JSON file on Cloud Storage.
 6. A second Cloud Function is triggered on object.create that reads the findings JSON file, redacts sensitive information from the audio file and writes the redacted audio file to Cloud Storage.
 
+## Required IAM Permissions
+
+The service account or user executing these commands requires the following IAM Roles at the GCP Project level. These are grouped by their functional domain:
+
+*Compute & Orchestration*
+- Cloud Functions Developer: To deploy and manage function-based logic.
+
+- Compute Admin: Full control over GCE resources (VMs, disks).
+
+- Dataflow Developer: To execute and monitor data processing pipelines.
+
+*Networking*
+- Compute Network Admin: To create and modify VPC resources.
+
+- Compute Network User: Allows the execution account to utilize existing network resources. 
+
+*Data & Security*
+- DLP Administrator: Full access to Cloud Data Loss Prevention features.
+
+- Storage Admin: Full control over GCS buckets and objects.
+
+- Pub/Sub Admin: To manage messaging topics and subscriptions.
+
+*Identity & Access Management (IAM)*
+- Project IAM Admin: To manage access control for the project.
+
+- Service Account User: Allows the executor to "act as" a service account to run jobs.
+
+- Service Usage Admin: To enable or disable APIs required by the script.
+
+*Logging & Monitoring*
+- Logging Admin: To manage log sinks and configurations.
+
+- Logs Viewer: To audit and troubleshoot execution via logs.
+
 ## APIs
 
 #### Enable the required APIs: 
