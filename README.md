@@ -26,6 +26,24 @@ The process follows:
 5. The Cloud Dataflow job identifies sensitive information and writes the findings to a JSON file on Cloud Storage.
 6. A second Cloud Function is triggered on object.create that reads the findings JSON file, redacts sensitive information from the audio file and writes the redacted audio file to Cloud Storage.
 
+## Required IAM Permissions
+
+The service account or user executing these commands requires the following IAM Roles at the GCP Project level:
+
+- Cloud Functions Developer
+- Compute Admin
+- Compute Network Admin
+- Compute Network User
+- Dataflow Developer
+- DLP Administrator
+- Logging Admin
+- Logs Viewer
+- Project IAM Admin
+- Pub/Sub Admin
+- Service Account User
+- Service Usage Admin
+- Storage Admin
+
 ## APIs
 
 #### Enable the required APIs: 
@@ -197,6 +215,8 @@ pip3 install apache-beam[gcp]
 Please wait as it might take a few minutes to complete.
 
 You can provide an existing [INSPECT_TEMPLATE_ID] if you already have an DLP Inspection template created or refer to section [Optional: DLP inspection template creation](#dlp-inspection-template-creation) to create a new one.
+
+> **⚠ NOTE**: The subnetwork must have Private Google Access enabled (On).
 
 ``` shell
 python3 srflongrunjobdataflow.py \
