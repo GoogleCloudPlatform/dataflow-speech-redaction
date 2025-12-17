@@ -121,7 +121,7 @@ resource "google_pubsub_topic" "topic" {
 # --- DLP Inspection Template ---
 
 resource "google_data_loss_prevention_inspect_template" "dlp_template" {
-  parent       = "projects/${var.project_id}/locations/${var.region}"
+  parent       = "projects/${var.project_id}/locations/global"
   template_id  = var.dlp_template_id
   display_name = "CCAI log entry inspection for PCI compliance"
   description  = "Inspection template for CCAI log entries needing PCI compliance"
