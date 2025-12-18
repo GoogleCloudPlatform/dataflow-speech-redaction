@@ -127,6 +127,7 @@ resource "google_data_loss_prevention_inspect_template" "dlp_template" {
   description  = "Inspection template for CCAI log entries needing PCI compliance"
 
   inspect_config {
+    include_quote = true
     info_types { name = "CREDIT_CARD_NUMBER" }
     info_types { name = "DATE_OF_BIRTH" }
     info_types { name = "EMAIL_ADDRESS" }
