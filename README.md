@@ -43,7 +43,7 @@ The service account or user executing these commands requires the following IAM 
 - Service Usage Admin
 - Storage Admin
 
-Give the user the role to impersonate the service account: 
+Grant the following IAM role to the user that will impersonate the Service Account: 
 - Workload Identity User
 
 **Use the following code snippet to grant necessary IAM permissions using gcloud:**
