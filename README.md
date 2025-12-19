@@ -93,29 +93,58 @@ gcloud services enable \
 
 ## Deployment
 
-1. Clone the Github repository
+1. Clone the GitHub repository:
+```shell
+git clone https://github.com/GoogleCloudPlatform/dataflow-speech-redaction.git
+cd dataflow-speech-redaction
+```
 
 2. Modify the following files to specify the correct values for each variable:
+    - `backend.tf`
+    - `terraform.tfvars`
+    - `providers.tf` (optional in case Service Account usage is needed)
 
-- backend.tf
-- terraform.tfvars
-- providers.tf (optional in case Service Account usage is needed)
+3. **Optional**: Modify the **"google_data_loss_prevention_inspect_template" "dlp_template"** resource in `main.tf` to customize the DLP inspect template with the required infoTypes to be redacted.
 
-3. Optional: modify **"google_data_loss_prevention_inspect_template" "dlp_template"** resource in **main.tf** to customize DLP inspect template with the required infotypes to be redacted. 
+4. Validate that the subnet specified in your `terraform.tfvars` has Private Google Access enabled. The target subnet must have Private Google Access enabled and must reside in the region specified by `var.region`.
 
-4. Validate that the selected subnet has Private Google Access: On.
-
-5. Initialize and apply terraform changes:
-
-``` shell
+5. Initialize, review, and apply the Terraform configuration:
+```shell
 terraform init
-```
-
-``` shell
 terraform plan
+terraform apply
 ```
+## Usage
 
-``` shell
+To trigger the pipeline, upload an audio file (.wav or .flac) to the input bucket defined in your configuration (variable: `audio_files_bucket_name` in `terraform.tfvars`).
+
+Once processing is complete, the redacted audio file will appear in the output bucket (variable: `redacted_audio_bucket_name` in `terraform.tfvars`).
+
+## Scalability
+
+This architecture uses Cloud Functions, which are powered by Cloud Run. They automatically scale up based on incoming traffic (uploaded audio files) and scale down to zero when idle.
+
+To control costs and prevent downstream systems from being overwhelmed, the functions are currently capped at **10 concurrent instances**.
+
+### How to Scale the Functions
+
+To increase the processing throughput or allow more concurrent executions, you must modify the Terraform configuration in `main.tf`.
+
+1.  Locate the `google_cloudfunctions2_function` resources (specifically `audio_process_func` and `redaction_func`).
+2.  Inside the `service_config` block, update the `max_instance_count` value.
+
+```hcl
+resource "google_cloudfunctions2_function" "audio_process_func" {
+  # ...
+  service_config {
+    max_instance_count = 50   # <--- Update this value (Default: 10)
+    # ...
+  }
+}
+```
+3. Save the file and apply the changes:
+```shell
+terraform plan
 terraform apply
 ```
 
