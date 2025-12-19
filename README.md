@@ -33,16 +33,50 @@ The service account or user executing these commands requires the following IAM 
 - Cloud Functions Developer
 - Compute Admin
 - Compute Network Admin
-- Compute Network User
 - Dataflow Developer
 - DLP Administrator
-- Logging Admin
+- Eventarc Admin
 - Logs Viewer
 - Project IAM Admin
 - Pub/Sub Admin
 - Service Account User
 - Service Usage Admin
 - Storage Admin
+
+Grant the following IAM role to the user that will impersonate the Service Account: 
+- Workload Identity User
+
+**Use the following code snippet to grant necessary IAM permissions using gcloud:**
+
+
+``` shell
+export PROJECT_ID="your-project-id"
+export SA_EMAIL="your-service-account@$PROJECT_ID.iam.gserviceaccount.com"
+```
+
+``` shell
+ROLES=(
+  "roles/cloudfunctions.developer"
+  "roles/compute.admin"
+  "roles/compute.networkAdmin"
+  "roles/dataflow.developer"
+  "roles/dlp.admin"
+  "roles/eventarc.admin"
+  "roles/logging.viewer"
+  "roles/resourcemanager.projectIamAdmin"
+  "roles/pubsub.admin"
+  "roles/iam.serviceAccountUser"
+  "roles/serviceusage.serviceUsageAdmin"
+  "roles/storage.admin"
+)
+
+for ROLE in "${ROLES[@]}"; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_EMAIL" \
+    --role="$ROLE" \
+    --condition=None
+done
+```
 
 ## APIs
 
@@ -52,202 +86,69 @@ export PROJECT_ID="<PROJECT_ID>"
 ```
 ``` shell
 gcloud services enable \
-    cloudbuild.googleapis.com \
-    compute.googleapis.com \
-    dataflow.googleapis.com \
-    run.googleapis.com \
-    speech.googleapis.com \
-    dlp.googleapis.com \
-    cloudfunctions.googleapis.com \
+    cloudresourcemanager.googleapis.com \
     eventarc.googleapis.com \
 --project=${PROJECT_ID}
 ```
 
-## Roles needed
 
-Grant the necessary IAM roles either through the Google Cloud Console or by using the ```gcloud``` commands provided below.
+## Deployment
 
-#### 1. Add the following roles to Compute Engine default service account (PROJECT_NUMBER-compute@developer.gserviceaccount.com):
-
-- Eventarc Event Receiver role
-- Cloud Speech-to-Text Service Agent
-- DLP User
-- DLP Administrator
-- Pub/Sub Admin
-- Pub/Sub Subscriber
-- Pub/Sub Viewer
-- Dataflow Worker
-- Cloud Run Invoker
-
-```gcloud``` commands:
-
+1. Clone the GitHub repository:
 ```shell
-export PROJECT_ID="<PROJECT_ID>" 
+git clone https://github.com/GoogleCloudPlatform/dataflow-speech-redaction.git
+cd dataflow-speech-redaction
 ```
 
+2. Modify the following files to specify the correct values for each variable:
+    - `backend.tf`
+    - `terraform.tfvars`
+    - `providers.tf` (optional in case Service Account usage is needed)
+
+3. **Optional**: Modify the **"google_data_loss_prevention_inspect_template" "dlp_template"** resource in `main.tf` to customize the DLP inspect template with the required infoTypes to be redacted.
+
+4. Validate that the subnet specified in your `terraform.tfvars` has Private Google Access enabled. The target subnet must have Private Google Access enabled and must reside in the region specified by `var.region`.
+
+5. Initialize, review, and apply the Terraform configuration:
 ```shell
-export GCE_SERVICE_ACCOUNT="$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/eventarc.eventReceiver" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/speech.serviceAgent" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/dlp.user" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/dlp.admin" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/pubsub.admin" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/pubsub.subscriber" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/pubsub.viewer" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/dataflow.worker" 
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/run.invoker"
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCE_SERVICE_ACCOUNT}" --role="roles/cloudbuild.builds.builder"
+terraform init
+terraform plan
+terraform apply
 ```
+## Usage
 
-#### 2. Add **roles/pubsub.publisher** to GCS Service account (Google Storage Service Agent)
+To trigger the pipeline, upload an audio file (.wav or .flac) to the input bucket defined in your configuration (variable: `audio_files_bucket_name` in `terraform.tfvars`).
 
-```gcloud``` commands:
+Once processing is complete, the redacted audio file will appear in the output bucket (variable: `redacted_audio_bucket_name` in `terraform.tfvars`).
 
+## Scalability
+
+This architecture uses Cloud Functions, which are powered by Cloud Run. They automatically scale up based on incoming traffic (uploaded audio files) and scale down to zero when idle.
+
+To control costs and prevent downstream systems from being overwhelmed, the functions are currently capped at **10 concurrent instances**.
+
+### How to Scale the Functions
+
+To increase the processing throughput or allow more concurrent executions, you must modify the Terraform configuration in `main.tf`.
+
+1.  Locate the `google_cloudfunctions2_function` resources (specifically `audio_process_func` and `redaction_func`).
+2.  Inside the `service_config` block, update the `max_instance_count` value.
+
+```hcl
+resource "google_cloudfunctions2_function" "audio_process_func" {
+  # ...
+  service_config {
+    max_instance_count = 50   # <--- Update this value (Default: 10)
+    # ...
+  }
+}
+```
+3. Save the file and apply the changes:
 ```shell
-GCS_SERVICE_ACCOUNT="$(gcloud storage service-agent --project=${PROJECT_ID})"
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${GCS_SERVICE_ACCOUNT}" --role='roles/pubsub.publisher'
+terraform plan
+terraform apply
 ```
 
-## How to install the Speech Analysis Framework
 
-#### 1. [Install the Google Cloud SDK](https://cloud.google.com/sdk/install)
-
-#### 2. Create a storage bucket for **Dataflow Staging Files**
-
-```shell
-gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
-```
-
-#### 3. Through the [Google Cloud Console](https://console.cloud.google.com) create a folder named **tmp** in the newly created bucket for the DataFlow staging files
-
-#### 4. Create a storage bucket for **Cloud Functions deployment (Stage bucket)**. 
-
-``` shell
-gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
-```
-
-#### 5. Create a storage bucket for **Uploaded Audio Files**. 
-
-``` shell
-gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
-```
-
-#### 6. Create a storage bucket for **DLP Findings**.  
-
-``` shell
-gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
-```
-
-#### 7. Create a storage bucket for **Redacted Audio Files**
-
-``` shell
-gcloud storage buckets create gs://<BUCKET_NAME> -l <REGION>
-```
-
-#### 8. Create Cloud Pub/Sub Topic
-``` shell
-gcloud pubsub topics create [YOUR_TOPIC_NAME]
-```
-
-#### 9. Clone the github repo
-
-#### 10. Deploy the **Audio Process** Google Cloud Function
-
-In the cloned repo, go to the `srf-audio-process-func` directory and deploy the following Cloud Function.
-
-> **⚠ NOTE**: On line 29 of the `index.js` file, add your TOPIC_NAME you created in step 7.
-
-> **⚠ NOTE**: the trigger location must be the same as the Uploaded Audio Files bucket.
-
-``` shell
-gcloud functions deploy srfAudioProcessFunc \
-    --region=<REGION> \
-    --trigger-location=[AUDIO_FILES_BUCKET_LOCATION] \
-    --stage-bucket=[STAGE_BUCKET_NAME] \
-    --runtime=nodejs20 \
-    --trigger-bucket=[YOUR_UPLOADED_AUDIO_FILES_BUCKET_NAME] \
-    --ingress-settings=internal-only
-```
-> **⚠ NOTE**: If you run into any timeout issues with Cloud Functions, it is recommend to increase the timeout and optionally increase the Cloud Function resources.
-
-#### 11. Deploy the **Redact** Google Cloud Function
-
-In the cloned repo, go to the `srf-redaction-func` directory and deploy the following Cloud Function.
-
-> **⚠ NOTE**: Before deploying the redact function, on line 19 of the `index.js` file, add your **Redacted Audio Files** bucket name.
-> **⚠ NOTE**: the trigger location must be the same as the DLP Findings bucket.
-
-``` shell
-gcloud functions deploy srfRedactionFunc \
-    --region=<REGION> \
-    --stage-bucket=[STAGE_BUCKET_NAME] \
-    --runtime=nodejs20 \
-    --trigger-bucket=[YOUR_DLP_BUCKET_BUCKET_NAME] \
-    --trigger-location=[DLP_FINDINGS_BUCKET_LOCATION] \
-    --ingress-settings=internal-only
-```
-
-> **⚠ NOTE**: For large audio files, it is recommend to change the Cloud Function memory allocation.
-
-#### 12. Deploy the Cloud Dataflow Job
-
-In the cloned repo, go to `srf-longrun-job-dataflow` directory and deploy the Cloud Dataflow Job. Run the commands below to deploy the dataflow job:
-``` shell
-# MacOS/Linux
-# python3 --version Python 3.7.8
-
-python3 -m venv env
-source env/bin/activate
-pip3 install apache-beam[gcp]
-```
-
-Please wait as it might take a few minutes to complete.
-
-You can provide an existing [INSPECT_TEMPLATE_ID] if you already have an DLP Inspection template created or refer to section [Optional: DLP inspection template creation](#dlp-inspection-template-creation) to create a new one.
-
-> **⚠ NOTE**: The subnetwork must have Private Google Access enabled (On).
-
-``` shell
-python3 srflongrunjobdataflow.py \
-    --project=[YOUR_PROJECT_ID] \
-    --input_topic=projects/[YOUR_PROJECT_ID]/topics/[YOUR_TOPIC_NAME] \
-    --runner=DataflowRunner \
-    --temp_location=gs://[YOUR_DATAFLOW_STAGING_BUCKET]/tmp \
-    --output=gs://[YOUR_DLP_FINDINGS_BUCKET] \
-    --region=[GOOGLE_CLOUD_REGION] \
-    --requirements_file="requirements.txt" \
-    --inspect_template=[DLP_TEMPLATE_ID] \
-    --subnetwork=https://www.googleapis.com/compute/v1/projects/[PROJECT_ID]/regions/[REGION]/subnetworks/[SUBNET_NAME] 
-```
-
-Once the steps are completed above, upload your audio files to the **Uploaded Audio Files** storage bucket. Once the file is processed you will find the DLP findings in the **DLP Findings** storage bucket and the redacted audio files in the **Redacted Audio Files** storage bucket.
-
-## DLP inspection template creation
-
-To create a DLP Inspection template, you can utilize the `create_template.py` Python script.
-
-Before running the script, modify `inspect_template_congig.json` file to specify [built-in infoTypes](https://cloud.google.com/sensitive-data-protection/docs/infotypes-reference) and [custom infoTypes](https://cloud.google.com/sensitive-data-protection/docs/creating-custom-infotypes-dictionary) accordingly to your business needs. 
-
-#### Run the script with the following command:
-
-In the cloned repo, go to `dlp_templates` directory
-
-```shell
-pip install google-cloud-dlp
-python3 create_template.py --project_id=[PROJECT_ID] --config=inspect_template_config.json 
-```
-
-This command will output the template ID that you will need to pass as part of the parameters to configure the dataflow job.
 
 **This is not an officially supported Google product**

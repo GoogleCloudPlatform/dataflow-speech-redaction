@@ -16,7 +16,7 @@
 
 'use strict';
 
-let redactedBucketName = "gs://" + "REDACTED_AUDIO_BUCKET_NAME" // TODO: Replace value with your GCS Bucket Name
+let redactedBucketName = "gs://" + process.env.REDACTED_AUDIO_BUCKET_NAME
 
 const fs = require('fs');
 const storage = require('@google-cloud/storage')();

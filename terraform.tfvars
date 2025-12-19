@@ -1,0 +1,11 @@
+project_id                   = "[REPLACE]"
+region                       = "[REPLACE]" # e.g., us-central1
+buckets_region               = "[REPLACE]" # e.g., us or us-central1
+dataflow_staging_bucket_name = "[REPLACE]-staging-bucket"
+cloud_functions_bucket_name  = "[REPLACE]-cloud-functions-bucket"
+audio_files_bucket_name      = "[REPLACE]-audio-files-bucket"
+dlp_findings_bucket_name     = "[REPLACE]-dlp-findings-bucket"
+redacted_audio_bucket_name   = "[REPLACE]-redacted-audio-bucket"
+pubsub_topic_name            = "[REPLACE]-pubsub-topic"
+dlp_template_id              = "[REPLACE]-dlp-template-id"
+dataflow_subnet_name         = "[REPLACE]"
