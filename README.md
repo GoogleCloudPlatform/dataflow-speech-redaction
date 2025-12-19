@@ -46,7 +46,8 @@ The service account or user executing these commands requires the following IAM 
 Give the user the role to impersonate the service account: 
 - Workload Identity User
 
-### Gcloud commands:
+**Use the following code snippet to grant necessary IAM permissions using gcloud:**
+
 
 ``` shell
 export PROJECT_ID="your-project-id"
