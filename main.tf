@@ -1,10 +1,3 @@
-provider "google" {
-  project = var.project_id
-  region  = var.region
-  user_project_override = true
-  billing_project       = var.project_id
-}
-
 locals {
   # List of APIs to enable
   apis = [
@@ -78,35 +71,35 @@ resource "google_project_iam_member" "gcs_sa_roles" {
 
 resource "google_storage_bucket" "dataflow_staging_bucket" {
   name          = var.dataflow_staging_bucket_name
-  location      = var.region
+  location      = var.buckets_region
   force_destroy = true
   uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "cloud_functions_bucket" {
   name          = var.cloud_functions_bucket_name
-  location      = var.region
+  location      = var.buckets_region
   force_destroy = true
   uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "audio_files_bucket" {
   name          = var.audio_files_bucket_name
-  location      = var.region
+  location      = var.buckets_region
   force_destroy = true
   uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "dlp_findings_bucket" {
   name          = var.dlp_findings_bucket_name
-  location      = var.region
+  location      = var.buckets_region
   force_destroy = true
   uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "redacted_audio_bucket" {
   name          = var.redacted_audio_bucket_name
-  location      = var.region
+  location      = var.buckets_region
   force_destroy = true
   uniform_bucket_level_access = true
 }
@@ -127,6 +120,7 @@ resource "google_data_loss_prevention_inspect_template" "dlp_template" {
   description  = "Inspection template for CCAI log entries needing PCI compliance"
 
   inspect_config {
+    include_quote = true
     info_types { name = "CREDIT_CARD_NUMBER" }
     info_types { name = "DATE_OF_BIRTH" }
     info_types { name = "EMAIL_ADDRESS" }
@@ -169,7 +163,7 @@ resource "google_storage_bucket_object" "audio_process_func_object" {
 # Deploy the audio processing function
 resource "google_cloudfunctions2_function" "audio_process_func" {
   name     = "srf-audio-process-func"
-  location = "us-central1"
+  location = var.region
 
   build_config {
     runtime     = "nodejs20"
@@ -183,16 +177,16 @@ resource "google_cloudfunctions2_function" "audio_process_func" {
   }
 
   service_config {
-    max_instance_count = 1
+    max_instance_count = 10
     environment_variables = {
       TOPIC_NAME = google_pubsub_topic.topic.name
     }
   }
 
   event_trigger {
-    trigger_region = "us-central1"
+    trigger_region = var.buckets_region
     event_type     = "google.cloud.storage.object.v1.finalized"
-    retry_policy   = "RETRY_POLICY_RETRY"
+    #retry_policy   = "RETRY_POLICY_RETRY"
     service_account_email = data.google_compute_default_service_account.gce_default_sa.email
     event_filters {
       attribute = "bucket"
@@ -220,7 +214,7 @@ resource "google_storage_bucket_object" "redaction_func_object" {
 # Deploy the redaction function
 resource "google_cloudfunctions2_function" "redaction_func" {
   name     = "srf-redaction-func"
-  location = "us-central1"
+  location = var.region
 
   build_config {
     runtime     = "nodejs20"
@@ -234,16 +228,16 @@ resource "google_cloudfunctions2_function" "redaction_func" {
   }
 
   service_config {
-    max_instance_count = 1
+    max_instance_count = 10
     environment_variables = {
       REDACTED_AUDIO_BUCKET_NAME = google_storage_bucket.redacted_audio_bucket.name
     }
   }
 
   event_trigger {
-    trigger_region = "us-central1"
+    trigger_region = var.buckets_region
     event_type     = "google.cloud.storage.object.v1.finalized"
-    retry_policy   = "RETRY_POLICY_RETRY"
+    #retry_policy   = "RETRY_POLICY_RETRY"
     service_account_email = data.google_compute_default_service_account.gce_default_sa.email
     event_filters {
       attribute = "bucket"
@@ -252,4 +246,31 @@ resource "google_cloudfunctions2_function" "redaction_func" {
   }
 
   depends_on = [google_project_service.enabled_apis]
+}
+
+# Deploy the Dataflow Job and instance
+resource "terraform_data" "dataflow_job" {
+  # Re-run the script if the Python code OR the shell script changes
+  triggers_replace = [
+    filesha1("${path.module}/srf-longrun-job-dataflow/srflongrunjobdataflow.py"),
+    filesha1("${path.module}/deploy_dataflow.sh"),
+    filesha1("${path.module}/srf-longrun-job-dataflow/requirements.txt")
+  ]
+
+  provisioner "local-exec" {
+    # We call the script and pass the Terraform variables as arguments
+    command = <<EOT
+      ${path.module}/deploy_dataflow.sh \
+        --project=${var.project_id} \
+        --input_topic=projects/${var.project_id}/topics/${var.pubsub_topic_name} \
+        --runner=DataflowRunner \
+        --temp_location=gs://${var.dataflow_staging_bucket_name}/tmp \
+        --output=gs://${var.dlp_findings_bucket_name} \
+        --region=${var.region} \
+        --requirements_file="${path.module}/requirements.txt" \
+        --inspect_template=${var.dlp_template_id} \
+        --subnetwork=https://www.googleapis.com/compute/v1/projects/${var.project_id}/regions/${var.region}/subnetworks/${var.dataflow_subnet_name}
+
+    EOT
+  }
 }

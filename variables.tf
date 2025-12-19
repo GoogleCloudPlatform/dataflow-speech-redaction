@@ -9,6 +9,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "buckets_region" {
+  description = "The GCP region or multiregion to deploy buckets."
+  type        = string
+  default     = "us-central1"
+}
+
 variable "dataflow_staging_bucket_name" {
   description = "The name of the Cloud Storage bucket for Dataflow staging."
   type        = string
@@ -41,5 +47,10 @@ variable "pubsub_topic_name" {
 
 variable "dlp_template_id" {
   description = "The ID of the DLP inspection template."
+  type        = string
+}
+
+variable "dataflow_subnet_name" {
+  description = "The name of the subnet for Dataflow instance"
   type        = string
 }

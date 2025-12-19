@@ -1,6 +1,6 @@
 terraform {
     backend "gcs" {
-    bucket = "yt-redaction-tfstate" # <-- CHANGE THIS
+    bucket = "mw-redaction-dev-tf" # <-- CHANGE THIS
     prefix = "terraform/state"
     }
 }

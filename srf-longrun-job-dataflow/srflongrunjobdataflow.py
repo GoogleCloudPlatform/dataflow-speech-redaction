@@ -124,8 +124,8 @@ def redact_text(data, project, template_id):
                     data['dlp'].append(finding.quote)
             except AttributeError:
                 pass
-        else:
-            logging.info("No findings.")
+    else:
+        logging.info("No findings.")
     return data
 
 def run(argv=None, save_main_session=True):
